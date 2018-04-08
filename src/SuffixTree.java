@@ -35,6 +35,8 @@ public class SuffixTree {
     //当前节点数统计
     private int count = 0;
 
+    private boolean spilt = false;
+
 //    /**
 //     * SuffixTree的构造器，传入需要用来建树的文本
 //     * */
@@ -55,6 +57,7 @@ public class SuffixTree {
         //重置上下文状态
         remainder = 0;
         activePoint = new ActivePoint(root, -1, -1);
+        spilt = false;
 
         texts.add(text + "$");
         this.locations.add(location);
@@ -153,12 +156,12 @@ public class SuffixTree {
                 continue;
             }
 
+            spilt = true;
             //如果这个字符不存在的话👀
             if (remainder == 0) { //只需要插入当前字符
                 //当remainder为0的时候肯定是在根节点上
                 Node newNode = new Node(new Index(index.cur), index);
                 activePoint.active_node.subs.add(newNode);
-
             } else { //还需要处理之前的步骤留下来的后缀们
                 remainder++;
                 innerSplit(index, null);
@@ -182,6 +185,13 @@ public class SuffixTree {
         char insert = curText.charAt(index.cur);
         System.out.println("在递归插入的流程中寻找待插入字符是否存在");
         if (find(insert)) {
+//            if (remainder == curText.length()) {
+//                if (activePoint.active_edge == -1) {
+//                    activePoint.active_node.equi.add(texts.size() - 1);
+//                } else {
+//                    activePoint.active_node.subs.get(activePoint.active_edge).equi.add(texts.size() - 1);
+//                }
+//            }
             System.out.println("待插入后缀： " +  insert + " 已找到，暂且退出递归");
             return;
         }
@@ -293,7 +303,7 @@ public class SuffixTree {
 
                 Node edg = activePoint.active_node.subs.get(activePoint.active_edge);
                 int length = activePoint.active_length;
-                System.out.println("Edg: " + edg + ": " + curText.substring(edg.left.cur, edg.right.cur + 1));
+                System.out.println("Edg: " + edg + ": " + texts.get(edg.ref).substring(edg.left.cur, edg.right.cur + 1));
                 if (edg.right.cur - edg.left.cur < length) {
                     System.out.println("边长度不够的时候有剩余的往前跳");
                     activePoint.active_node = edg;
@@ -396,7 +406,7 @@ public class SuffixTree {
                 if (textToCompare.charAt(curNode.left.cur) == c) {
                     activePoint.active_edge = i;
                     activePoint.active_length = 0;
-                    if (c == '$' && remainder == curText.length() - 1) {
+                    if (c == '$' && !spilt) {
                         int number = texts.size() - 1;
                         activePoint.active_node.subs.get(activePoint.active_edge).equi.add(number);
                     }
@@ -425,7 +435,7 @@ public class SuffixTree {
                         activePoint.active_edge = i;
                         activePoint.active_length = 0;
                         System.out.println("往前跳一个节点");
-                        if (c == '$' && remainder == curText.length() - 1) {
+                        if (c == '$' && !spilt) {
                             int number = texts.size() - 1;
                             activePoint.active_node.subs.get(activePoint.active_edge).equi.add(number);
                         }
@@ -440,10 +450,10 @@ public class SuffixTree {
                         activePoint.active_edge = -1;
                         activePoint.active_length -= curNode.right.cur - curNode.left.cur + 1;
                         System.out.println("往前跳一个节点");
-                        if (c == '$' && remainder == curText.length() - 1) {
-                            int number = texts.size() - 1;
-                            activePoint.active_node.equi.add(number);
-                        }
+                    }
+                    if (c == '$' && !spilt) {
+                        int number = texts.size() - 1;
+                        activePoint.active_node.equi.add(number);
                     }
                     return true;
                 }
@@ -473,11 +483,24 @@ public class SuffixTree {
                 for (Node sub : n.subs) {
                     temp.add(sub);
                 }
-                if (n.subs.size() == 0 && n.equi.size() > 1) {
+                if (n.equi.size() > 1) {
                     //说明是叶子节点，输出等价类
-                    String ec = "";
+                    HashSet<String> nameSet = new HashSet<>();
+//                    String ec = "";
+//                    for (int p: n.equi) {
+//                        ec += locations.get(p);
+//                    }
+//                    System.out.println(ec);
+
                     for (int p : n.equi) {
-                        ec += "" + locations.get(p);
+                        nameSet.add(locations.get(p));
+                    }
+                    if (nameSet.size() <= 1) {
+                        continue;
+                    }
+                    String ec = "";
+                    for (String s : nameSet) {
+                        ec += s;
                     }
                     System.out.println(ec);
                 }
@@ -487,6 +510,37 @@ public class SuffixTree {
             temp = new ArrayList<>();
         }
     }
+
+    /**
+     * 获取等价类
+     * */
+    public ArrayList<HashSet<Integer>>  getEquivalenceClass(){
+        //ArrayList<String> ret = new ArrayList<>();
+        ArrayList<Node> list = new ArrayList<>(root.subs);
+        ArrayList<Node> temp = new ArrayList<>();
+        ArrayList<HashSet<Integer>> equiList = new ArrayList<>();
+        while (true) {
+            for (Node n: list) {
+                for (Node sub : n.subs) {
+                    temp.add(sub);
+                }
+                if (n.subs.size() == 0 && n.equi.size() > 1) {
+                    //说明是叶子节点，输出等价类
+                    equiList.add(n.equi);
+                }
+            }
+            if (temp.size() == 0) break;
+            list = temp;
+            temp = new ArrayList<>();
+        }
+        return equiList;
+    }
+
+    /**
+     * 等价类的划分：把有关系的字符串们划分到一处
+     * */
+
+
 
     /**
      * 格式化打印出整个后缀树
@@ -556,32 +610,32 @@ public class SuffixTree {
 //        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
 //        System.out.println("最终结果： ");
 //        suffixTree.print();
+        ArrayList<HashSet<Integer>> equi = new ArrayList<>();
 
-        String[] tests = {"aasasasaa", "saa", "aasasasaa", "aaabaaa", "aaa", "abababab", "aaaabbbbaaaabbbbbbbb"};
-        String[] locations = {"method1", "method2", "method3", "method4", "method5", "method6", "method7"};
+        String[] tests = {    "aasasasaa", "saa",     "aaa",     "aaabaaa", "aaa",      "aasasasaa",   "aaaabbbbaaaabbbbbbbb"};
+        String[] locations = {"method1",   "method2", "method3", "method4", "method5",  "method6",     "method7"};
         SuffixTree suffixTree = new SuffixTree();
         for (int i = 0; i < tests.length; i++) {
             System.out.println("Add text : " + tests[i]);
             suffixTree.addText(tests[i], locations[i]);
             System.out.println();
             System.out.println("Added text "+  tests[i] + "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ remainder: " + suffixTree.remainder);
-
         }
 
         suffixTree.printEquivalenceClass();
 
-//        for (int i = tests.length - 1; i >= 0; i--) {
-//            System.out.println("Add text : " + tests[i]);
-//            suffixTree.addText(tests[i], locations[i]);
-//            System.out.println();
-//            System.out.println("Added text "+  tests[i] + "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ remainder: " + suffixTree.remainder);
-//        }
-//
-//        System.out.println("最终结果： ");
-//        //suffixTree.print();
-//
-//        //输出得到的等价类
-//        suffixTree.printEquivalenceClass();
+        for (int i = tests.length - 1; i >= 0; i--) {
+            System.out.println("Add text : " + tests[i]);
+            suffixTree.addText(tests[i], locations[i]);
+            System.out.println();
+            System.out.println("Added text "+  tests[i] + "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ remainder: " + suffixTree.remainder);
+        }
+
+
+
+        System.out.println("最终结果： ");
+        //suffixTree.print();
+        suffixTree.printEquivalenceClass();
     }
 }
 
