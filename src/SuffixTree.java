@@ -35,6 +35,9 @@ public class SuffixTree {
     //当前节点数统计
     private int count = 0;
 
+    //相似方法结果
+    private HashSet<HashSet<String>> nameSetSet = new HashSet<>();
+
     private boolean spilt = false;
 
 //    /**
@@ -63,12 +66,17 @@ public class SuffixTree {
         this.locations.add(location);
         this.curText = text + "$";
         this.build();
+        this.getEquivalenceClass();
+    }
+
+    public void resetRoot() {
+        root = new Node();
     }
 
     /**
      * SuffixTree的节点
      * */
-    private class Node {
+    public class Node {
         //所包含的字符串开始的位置
         public Index left;
         //所包含的字符串结束的位置
@@ -103,7 +111,7 @@ public class SuffixTree {
             if (this.left == null) {
                 return "root";
             }
-            return texts.get(this.ref).substring(left.cur, right.cur + 1) + flag;
+            return texts.get(this.ref).substring(left.cur, right.cur + 1) + flag + "|" + equi;
         }
     }
 
@@ -464,10 +472,64 @@ public class SuffixTree {
     }
 
     /**
-     * 查找方法
+     * 对等价类进行去重和合并
      * */
-    public boolean search(String pattern) {
-        return false;
+    private void merge() {
+        ArrayList<HashSet<String>> temp = new ArrayList<>();
+        for (HashSet<String> set: nameSetSet) {
+            temp.add(set);
+        }
+        for (HashSet<String> set: temp) {
+            nameSetSet.remove(set);
+        }
+
+        boolean[] marked = new boolean[temp.size()];
+
+        HashSet<HashSet<String>> set = new HashSet<>();
+        for (int i = 0; i < temp.size(); i++) {
+            if (marked[i]) {
+                continue;
+            }
+            marked[i] = true;
+            HashSet<String> cur = temp.get(i);
+            for (int j = i + 1; j < temp.size(); j++) {
+                if (marked[j]) {
+                    continue;
+                }
+                boolean needMerge = false;
+                for (String s : temp.get(j)) {
+                    if (cur.contains(s)) {
+                        needMerge = true;
+                    }
+                }
+                if (!needMerge) {
+                    continue;
+                }
+                marked[j] = true;
+                for (String s: temp.get(j)) {
+                    cur.add(s);
+                }
+            }
+            set.add(cur);
+        }
+        nameSetSet = set;
+    }
+
+    /**
+     * 输出等价类的最终结果
+     * */
+    public void printBidirectional() {
+        System.out.println("双向比较之后的结果");
+        merge();
+        for (HashSet<String> set : nameSetSet) {
+            if (set.size() > 1) {
+                String m = "";
+                for (String s: set) {
+                    m += s;
+                }
+                System.out.println(m);
+            }
+        }
     }
 
     /**
@@ -476,14 +538,17 @@ public class SuffixTree {
     public void printEquivalenceClass() {
         System.out.println("\n\n\n\n\n");
         System.out.println("以下是找到的等价类");
+
         ArrayList<Node> list = new ArrayList<>(root.subs);
         ArrayList<Node> temp = new ArrayList<>();
+        int index = 0;
+
         while (true) {
             for (Node n: list) {
                 for (Node sub : n.subs) {
                     temp.add(sub);
                 }
-                if (n.equi.size() > 1) {
+                if ( index > 0 && n.equi.size() > 1) {
                     //说明是叶子节点，输出等价类
                     HashSet<String> nameSet = new HashSet<>();
 //                    String ec = "";
@@ -508,38 +573,48 @@ public class SuffixTree {
             if (temp.size() == 0) break;
             list = temp;
             temp = new ArrayList<>();
+            index++;
         }
     }
 
     /**
      * 获取等价类
      * */
-    public ArrayList<HashSet<Integer>>  getEquivalenceClass(){
+    public void getEquivalenceClass(){
         //ArrayList<String> ret = new ArrayList<>();
         ArrayList<Node> list = new ArrayList<>(root.subs);
         ArrayList<Node> temp = new ArrayList<>();
-        ArrayList<HashSet<Integer>> equiList = new ArrayList<>();
+        int index = 0;
+
         while (true) {
-            for (Node n: list) {
+            for (Node n : list) {
                 for (Node sub : n.subs) {
                     temp.add(sub);
                 }
-                if (n.subs.size() == 0 && n.equi.size() > 1) {
+                if (index > 0 && n.equi.size() > 1) {
                     //说明是叶子节点，输出等价类
-                    equiList.add(n.equi);
+                    HashSet<String> nameSet = new HashSet<>();
+
+                    for (int p : n.equi) {
+                        nameSet.add(locations.get(p));
+                    }
+                    if (nameSet.size() <= 1) {
+                        continue;
+                    }
+                    nameSetSet.add(nameSet);
                 }
             }
             if (temp.size() == 0) break;
             list = temp;
             temp = new ArrayList<>();
+            index++;
         }
-        return equiList;
+
     }
 
     /**
      * 等价类的划分：把有关系的字符串们划分到一处
      * */
-
 
 
     /**
@@ -604,15 +679,11 @@ public class SuffixTree {
     // abababab pass
     // aaaabbbbaaaabbbbbbbb pass
     public static void main(String[] args){
-//        SuffixTree suffixTree = new SuffixTree();
-//        suffixTree.addText("aasasasaasaaaasasasaaaaabaaaaaaababababaaaabbbbaaaabbbbbbbb", "method7");
-//        System.out.println();
-//        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
-//        System.out.println("最终结果： ");
-//        suffixTree.print();
-        ArrayList<HashSet<Integer>> equi = new ArrayList<>();
 
-        String[] tests = {    "aasasasaa", "saa",     "aaa",     "aaabaaa", "aaa",      "aasasasaa",   "aaaabbbbaaaabbbbbbbb"};
+        /**
+         * 注意一点，有的后缀没有被加进去
+         * */
+        String[] tests = {    "aasasasaa", "saaa",     "aaa",     "aaa",     "aaabaaa",  "aasasasaa",   "aaaabbbbaaaabbbbbbbb"};
         String[] locations = {"method1",   "method2", "method3", "method4", "method5",  "method6",     "method7"};
         SuffixTree suffixTree = new SuffixTree();
         for (int i = 0; i < tests.length; i++) {
@@ -622,8 +693,7 @@ public class SuffixTree {
             System.out.println("Added text "+  tests[i] + "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ remainder: " + suffixTree.remainder);
         }
 
-        suffixTree.printEquivalenceClass();
-
+        suffixTree.resetRoot();
         for (int i = tests.length - 1; i >= 0; i--) {
             System.out.println("Add text : " + tests[i]);
             suffixTree.addText(tests[i], locations[i]);
@@ -631,11 +701,7 @@ public class SuffixTree {
             System.out.println("Added text "+  tests[i] + "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ remainder: " + suffixTree.remainder);
         }
 
-
-
-        System.out.println("最终结果： ");
-        //suffixTree.print();
-        suffixTree.printEquivalenceClass();
+        suffixTree.printBidirectional();
     }
 }
 
