@@ -38,6 +38,7 @@ public class SuffixTree {
     //相似方法结果
     private HashSet<HashSet<String>> nameSetSet = new HashSet<>();
 
+    //表示新加入文本是否已存在的flag
     private boolean spilt = false;
 
 //    /**
@@ -66,7 +67,8 @@ public class SuffixTree {
         this.locations.add(location);
         this.curText = text + "$";
         this.build();
-        this.getEquivalenceClass();
+        //this.merge();
+        //this.getEquivalenceClass();
     }
 
     public void resetRoot() {
@@ -150,9 +152,10 @@ public class SuffixTree {
         Index index = new Index();
         index.cur = 0;
         while (index.cur < curText.length()) {
-            System.out.println("Tree Structure before index++"); {
-                print();
-            }
+            System.out.println("Tree Structure before index++");
+
+            print();
+
             //需要插入的下一个字符
             char insert = curText.charAt(index.cur);
 
@@ -204,7 +207,7 @@ public class SuffixTree {
             return;
         }
 
-        if ( (activePoint.active_length == -1)) {
+        if ( activePoint.active_length == -1) {
             Node insertNode = new Node(new Index(index.cur), index);
             activePoint.active_node.subs.add(insertNode);
             prefixNode = null;
@@ -237,9 +240,6 @@ public class SuffixTree {
 
                 prefixNode = newNode;
             }
-
-
-
         }
         //减少remainder
         remainder--;
@@ -424,7 +424,7 @@ public class SuffixTree {
                         activePoint.active_length -= curNode.right.cur - curNode.left.cur + 1;
                         System.out.println("往前跳一个节点 + " + activePoint.active_length);
                         if (activePoint.active_node.suffixNode != null && activePoint.active_node.suffixNode.left != null) {
-                            System.out.println("节点的suffix: " + curText.charAt(activePoint.active_node.suffixNode.left.cur));
+                            System.out.println("节点的suffix: " + texts.get(activePoint.active_node.suffixNode.ref).charAt(activePoint.active_node.suffixNode.left.cur));
                         }
                     }
 //                    if (c == '$') {
@@ -683,7 +683,7 @@ public class SuffixTree {
         /**
          * 注意一点，有的后缀没有被加进去
          * */
-        String[] tests = {    "aasasasaa", "saaa",     "aaa",     "aaa",     "aaabaaa",  "aasasasaa",   "aaaabbbbaaaabbbbbbbb"};
+        String[] tests = {    "CompoundStmtDeclStmtDeclStmtReturnStmtIntegerLiteralIntegerLiteralBinaryOperatorImplicitCastExprImplicitCastExprImplicitCastExprDeclRefExprDeclRefExprDeclRefExpr", "CompoundStmtDeclStmtDeclStmtReturnStmtIntegerLiteralIntegerLiteralBinaryOperatorImplicitCastExprImplicitCastExprImplicitCastExprDeclRefExprDeclRefExprDeclRefExpr",     "aaa",     "aaa",     "aaabaaa",  "aasasasaa",   "aaaabbbbaaaabbbbbbbb"};
         String[] locations = {"method1",   "method2", "method3", "method4", "method5",  "method6",     "method7"};
         SuffixTree suffixTree = new SuffixTree();
         for (int i = 0; i < tests.length; i++) {
@@ -693,6 +693,8 @@ public class SuffixTree {
             System.out.println("Added text "+  tests[i] + "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ remainder: " + suffixTree.remainder);
         }
 
+        suffixTree.getEquivalenceClass();
+
         suffixTree.resetRoot();
         for (int i = tests.length - 1; i >= 0; i--) {
             System.out.println("Add text : " + tests[i]);
@@ -700,6 +702,10 @@ public class SuffixTree {
             System.out.println();
             System.out.println("Added text "+  tests[i] + "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ remainder: " + suffixTree.remainder);
         }
+
+        suffixTree.getEquivalenceClass();
+
+        suffixTree.merge();
 
         suffixTree.printBidirectional();
     }
